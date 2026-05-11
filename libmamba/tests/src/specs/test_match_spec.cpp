@@ -214,6 +214,15 @@ namespace
             REQUIRE(ms.is_only_package_name());
         }
 
+        SECTION("MatchSpec names are case insensitive")
+        {
+            // Non-regression test for: https://github.com/mamba-org/mamba/issues/4064
+            auto ms = MatchSpec::parse("GDAL!=3.6.*,!=3.7.*").value();
+            REQUIRE(ms.name().to_string() == "gdal");
+            REQUIRE(ms.version().to_string() == "!=3.6.*,!=3.7.*");
+            REQUIRE(ms.to_string() == R"ms(gdal[version="!=3.6.*,!=3.7.*"])ms");
+        }
+
         SECTION("disperse=v0.9.24")
         {
             auto ms = MatchSpec::parse("disperse=v0.9.24").value();
