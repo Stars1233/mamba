@@ -1,3 +1,13 @@
+## libmambapy 2.6.1 (May 13, 2026)
+
+Bug fixes:
+
+- fix: Adapt `add_pip_as_python_dependency` python tests by @danyeaw in <https://github.com/mamba-org/mamba/pull/4252>
+
+CI fixes and doc:
+
+- ci: Remove `sed`atives by @jjerphan in <https://github.com/mamba-org/mamba/pull/4271>
+
 ## libmambapy 2.6.0 (April 29, 2026)
 
 Enhancements:

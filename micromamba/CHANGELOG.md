@@ -1,3 +1,14 @@
+## micromamba 2.6.1 (May 13, 2026)
+
+Bug fixes:
+
+- fix: Free-threaded builds location on Windows by @jjerphan in <https://github.com/mamba-org/mamba/pull/4268>
+- fix: Entirely clean cache on `clean --all` by @jjerphan in <https://github.com/mamba-org/mamba/pull/4249>
+
+CI fixes and doc:
+
+- ci: Remove `sed`atives by @jjerphan in <https://github.com/mamba-org/mamba/pull/4271>
+
 ## micromamba 2.6.0 (April 29, 2026)
 
 Enhancements:

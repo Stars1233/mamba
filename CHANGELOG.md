@@ -1,3 +1,27 @@
+## 2026.05.13
+
+Release: 2.6.1 (libmamba, mamba, micromamba, libmambapy)
+
+Bug fixes:
+
+- [libmamba] fix: Support local install without explicit path by @jjerphan in <https://github.com/mamba-org/mamba/pull/4273>
+- [micromamba, libmamba] fix: Free-threaded builds location on Windows by @jjerphan in <https://github.com/mamba-org/mamba/pull/4268>
+- [libmamba] fix: Do not use python for platform detection by @jjerphan in <https://github.com/mamba-org/mamba/pull/4257>
+- [libmamba] fix: Adapt Sharded Repodata TTL update logic by @jjerphan in <https://github.com/mamba-org/mamba/pull/4269>
+- [libmamba] fix: Adaptations for vcpkg's distribution of zlib 1.3.2 on Windows by @jjerphan in <https://github.com/mamba-org/mamba/pull/4260>
+- [libmamba] fix: Normalize `MatchSpec` package names to lowercase by @jjerphan in <https://github.com/mamba-org/mamba/pull/4258>
+- [libmambapy] fix: Adapt `add_pip_as_python_dependency` python tests by @danyeaw in <https://github.com/mamba-org/mamba/pull/4252>
+- [micromamba, libmamba] fix: Entirely clean cache on `clean --all` by @jjerphan in <https://github.com/mamba-org/mamba/pull/4249>
+- [libmamba] fix: Normalize MatchSpec's name to lowercase internally by @jjerphan in <https://github.com/mamba-org/mamba/pull/4248>
+
+CI fixes and doc:
+
+- [all] ci: Remove `sed`atives by @jjerphan in <https://github.com/mamba-org/mamba/pull/4271>
+
+Maintenance:
+
+- [libmamba] maint: Remove `libxml2` as a dependency by @jjerphan in <https://github.com/mamba-org/mamba/pull/4261>
+
 ## 2026.04.29
 
 Release: 2.6.0 (libmamba, mamba, micromamba, libmambapy)
