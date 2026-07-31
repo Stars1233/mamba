@@ -70,6 +70,21 @@ jobs:
         run: |
           cd micromamba-feedstock/
           sed -i '' '/conda_forge_output_validation/d' conda-forge.yml
+      # Already applied upstream in mamba; feedstock patch is for released tarballs only.
+      - name: Remove psl dependencies patch
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("micromamba-feedstock/recipe/meta.yaml")
+          path.write_text(
+              "".join(
+                  line
+                  for line in path.read_text().splitlines(keepends=True)
+                  if "0001-psl-dependencies.patch" not in line
+              )
+          )
+          PY
       - name: Checkout mamba branch
         uses: actions/checkout@v7
         with:
@@ -178,6 +193,7 @@ jobs:
             reproc-cpp-static>=14.2.4.post0
             libmsgpack-c-static
             libcurl-static>=8.4.0
+            libpsl-static
             libarchive-minimal-static
             zstd-static
             zlib

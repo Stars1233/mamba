@@ -511,6 +511,7 @@ macro(libmamba_create_target target_name linkage output_name)
             set(
                 REQUIRED_STATIC_DEPS
                 libcurl.a
+                libpsl.a
                 libssh2.a
                 libgssapi_krb5.a
                 libkrb5.a
@@ -624,6 +625,7 @@ macro(libmamba_create_target target_name linkage output_name)
                 libssl_static.lib
                 libcrypto_static.lib
                 libcurl_a.lib
+                libpsl.a
             )
 
             set(STATIC_DEPS "")
@@ -644,7 +646,19 @@ macro(libmamba_create_target target_name linkage output_name)
 
             target_link_libraries(${target_name} PUBLIC ${SYSTEM_PROVIDED_LIBRARIES} ${STATIC_DEPS})
 
-            add_compile_definitions(LIBARCHIVE_STATIC CURL_STATICLIB)
+            # Necessary for properly linking static libraries.
+            add_compile_definitions(
+                # See:
+                # https://github.com/libarchive/libarchive/blob/19ff56da4f4790064346579a1a7f18a0230b0ac6/libarchive/archive_entry.h#L134-L158
+                LIBARCHIVE_STATIC
+                # See:
+                # https://github.com/curl/curl/blob/1d7b8e6c29e22c88750fb53a01e30be03104a3fd/docs/FAQ.md?plain=1#L1074-L1077
+                CURL_STATICLIB
+                # See:
+                # https://github.com/rockdaboot/libpsl/blob/8c06e95b8878f6b80613d7628486056728429d09/include/libpsl.h.in#L45-L55
+                PSL_STATIC
+            )
+
             include_directories("${_mamba_deps_prefix}/include/")
         endif()
     else()
