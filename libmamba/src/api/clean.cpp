@@ -235,7 +235,8 @@ namespace mamba
                     const auto& p = *it;
                     if (p.is_directory())
                     {
-                        if (is_inside_cache_metadata(p.path(), cache_root))
+                        const bool is_extracted_package = fs::exists(p.path() / "info" / "index.json");
+                        if (is_extracted_package || is_inside_cache_metadata(p.path(), cache_root))
                         {
                             it.disable_recursion_pending();
                         }
