@@ -754,7 +754,7 @@ namespace mamba
             }
             else
             {
-                throw std::move(result).value();
+                throw std::move(result).error();
             }
 
             LOG_TRACE << "Using default root prefix for micromamba: " << root_prefix;
