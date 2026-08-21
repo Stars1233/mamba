@@ -10,8 +10,14 @@
 #include <sys/utsname.h>
 #include <unistd.h>
 #if defined(__APPLE__)
+#include <cerrno>
+#include <cstring>
+
+#include <fcntl.h>
 #include <libproc.h>
 #include <mach-o/dyld.h>
+#include <spawn.h>
+#include <sys/wait.h>
 #endif
 #include <inttypes.h>
 #include <limits.h>
@@ -33,7 +39,6 @@
 #include <fmt/color.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
-#include <reproc++/run.hpp>
 
 #include "mamba/core/error_handling.hpp"
 #include "mamba/core/output.hpp"
@@ -46,6 +51,10 @@
 
 #ifdef _WIN32
 static_assert(std::is_same_v<mamba::DWORD, ::DWORD>);
+#endif
+
+#if defined(__APPLE__)
+extern "C" char** environ;
 #endif
 
 namespace mamba
@@ -743,23 +752,110 @@ namespace mamba
 #endif
     }
 
-    void codesign(const fs::u8path& path, bool verbose)
+    void codesign([[maybe_unused]] const fs::u8path& path, [[maybe_unused]] bool verbose)
     {
-        reproc::options options;
-        options.env.behavior = reproc::env::empty;
-        if (!verbose)
+#if defined(__APPLE__)
+        // Do not use `reproc` here. It forks and then `fcntl`/closes every FD up to
+        // `RLIMIT_NOFILE`; on GitHub Actions that limit is huge, the child aborts,
+        // and the parent sees `EINVAL`. `conda` and `rattler` just `posix_spawn` `codesign`
+        // with the inherited environment.
+
+        // Ad-hoc sign: `/usr/bin/codesign -s - -f <path>`
+        const std::string path_str = path.string();
+        char* argv[] = {
+            const_cast<char*>("/usr/bin/codesign"),
+            const_cast<char*>("-s"),
+            const_cast<char*>("-"),
+            const_cast<char*>("-f"),
+            const_cast<char*>(path_str.c_str()),
+            nullptr,
+        };
+
+        // File actions describe FD setup applied in the child before exec.
+        posix_spawn_file_actions_t file_actions;
+        int rc = posix_spawn_file_actions_init(&file_actions);
+        if (rc != 0)
         {
-            reproc::redirect silence;
-            silence.type = reproc::redirect::discard;
-            options.redirect.out = silence;
-            options.redirect.err = silence;
+            throw mamba_error(
+                std::string("Could not initialize codesign spawn file actions: ") + std::strerror(rc),
+                mamba_error_code::internal_failure
+            );
         }
 
-        const std::vector<std::string> cmd = { "/usr/bin/codesign", "-s", "-", "-f", path.string() };
-        auto [status, ec] = reproc::run(cmd, options);
-        if (ec)
+        // Quiet mode: redirect the child's `stdout` and `stderr` to `/dev/null`.
+        int devnull = -1;
+        if (!verbose)
         {
-            throw std::runtime_error(std::string("Could not codesign executable: ") + ec.message());
+            devnull = ::open("/dev/null", O_RDWR | O_CLOEXEC);
+            if (devnull >= 0)
+            {
+                rc = posix_spawn_file_actions_adddup2(&file_actions, devnull, STDOUT_FILENO);
+                if (rc == 0)
+                {
+                    rc = posix_spawn_file_actions_adddup2(&file_actions, devnull, STDERR_FILENO);
+                }
+                if (rc != 0)
+                {
+                    posix_spawn_file_actions_destroy(&file_actions);
+                    ::close(devnull);
+                    throw mamba_error(
+                        std::string("Could not redirect codesign stdout/stderr: ") + std::strerror(rc),
+                        mamba_error_code::internal_failure
+                    );
+                }
+            }
         }
+
+        // Spawn `codesign` with the inherited environment, then drop parent-side FDs.
+        pid_t pid = 0;
+        rc = posix_spawn(&pid, argv[0], &file_actions, nullptr, argv, ::environ);
+        posix_spawn_file_actions_destroy(&file_actions);
+        if (devnull >= 0)
+        {
+            ::close(devnull);
+        }
+        if (rc != 0)
+        {
+            throw mamba_error(
+                std::string("Could not spawn /usr/bin/codesign: ") + std::strerror(rc),
+                mamba_error_code::internal_failure
+            );
+        }
+
+        // Block until `codesign` exits and report a non-zero exit or signal.
+        int wstatus = 0;
+        if (waitpid(pid, &wstatus, 0) < 0)
+        {
+            throw mamba_error(
+                std::string("Could not wait for codesign process: ") + std::strerror(errno),
+                mamba_error_code::internal_failure
+            );
+        }
+        if (WIFEXITED(wstatus))
+        {
+            const int exit_status = WEXITSTATUS(wstatus);
+            if (exit_status != 0)
+            {
+                throw mamba_error(
+                    std::string("codesign failed with exit status ") + std::to_string(exit_status),
+                    mamba_error_code::internal_failure
+                );
+            }
+        }
+        else if (WIFSIGNALED(wstatus))
+        {
+            throw mamba_error(
+                std::string("codesign terminated by signal ") + std::to_string(WTERMSIG(wstatus)),
+                mamba_error_code::internal_failure
+            );
+        }
+        else
+        {
+            throw mamba_error(
+                "codesign ended with unexpected wait status",
+                mamba_error_code::internal_failure
+            );
+        }
+#endif
     }
 }
